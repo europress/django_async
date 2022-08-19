@@ -5,5 +5,6 @@ from . import views
 urlpatterns = [
     path('list/', views.ListImageView.as_view(), name='list'),
     path('download/', views.search_save, name='download'),
-    path('', views.SearchImageView.as_view())
+    path('img', views.SearchImageView.as_view()),
+    path('', views.MyView.as_view())
 ]

@@ -1,11 +1,44 @@
+import requests
 from asgiref.sync import sync_to_async, async_to_sync
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views import View
 
-from .forms import SearchForm
+from config.settings import PIXELS_API
+from .forms import SearchForm, MyForm
 from .services import search_image, save_images
 from .models import Image
+
+
+def get_images(query, count):
+    headers = {'Authorization': PIXELS_API}
+    params = {'query': query, 'per_page': count, 'page': 1}
+    url = 'https://api.pexels.com/v1/search'
+
+    response = requests.get(url, params=params, headers=headers)
+    if response.status_code == 200:
+        photos = response.json().get("photos", [])
+        return [{"tiny": url.get("src").get("tiny"), "original": url.get("src").get("original")} for url in photos]
+    return []
+
+
+class MyView(View):
+    def get(self, request):
+        context = {
+            'form': MyForm(),
+            'title': 'MyForm',
+        }
+        return render(request, "search_img/my_template.html", context)
+
+    def post(self, request):
+        form = MyForm(request.POST)
+        if form.is_valid():
+            context = {
+                'form': MyForm(),
+                'title': 'MyForm',
+                'photo_urls': get_images(form.cleaned_data["query"], form.cleaned_data["count"])
+            }
+            return render(request, "search_img/my_template.html", context)
 
 
 class SearchImageView(View):
