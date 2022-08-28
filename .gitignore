@@ -1,5 +1,7 @@
 venv
 idea
 .idea
-db.sqlite3
+db.sqlite3_
 */**/__pycache__
+media
+db.sqlite3

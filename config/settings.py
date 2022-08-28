@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-a&#7q^_0+^r#d-t=(jb)6m$6k2oz3z+-$^86u%w4ae_*)#!&xr
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1',]
 
 
 # Application definition
@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
+
     'search_img',
     'account',
 ]
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -120,7 +123,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = '/static/'
 MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / 'media/'
 
 
 # Default primary key field type
@@ -132,3 +135,10 @@ LOGIN_REDIRECT_URL = '/'
 
 PIXELS_API = '563492ad6f9170000100000101e5beebe95a4eb5b773b96e66c771ff'
 
+CORS_ORIGIN_ALLOW_ALL = False
+
+CORS_ORIGIN_WHITELIST = (
+    'http://:127.0.0.1:8000',
+)
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = None  # 31457280
