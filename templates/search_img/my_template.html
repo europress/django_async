@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <title>{{ title }}</title>
     <link rel="stylesheet" href="{% static '/style.css' %}" >
-    <script src="{% static '/script.js' %}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
+          integrity="sha512-1sCRPdkRXhBV2PBLUdRb4tMg1w2YPf37qatUFeS7zlBy7jJI8Lf4VHwWfZZfpXtYSLy85pkm9GaYVYMfw5BC1A=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"
+    />
 </head>
 <body>
     <form method="POST">
@@ -17,15 +20,28 @@
     {% if photo_urls %}
     <div class="images_frame">
         {% for url in photo_urls %}
-            <a href="#" onclick="modal('{{ url.original }}');">
-                <img width="300px" src="{{ url.tiny }}">
+            <a href="#" data-json-id="{{ url.id }}" onclick="modal(this);">
+                {{ url|json_script:url.id }}
+                <span></span>
+                <img width="300px" src="{{ url.tiny }}" alt="{{ url.alt }}">
             </a>
         {% endfor %}
     </div>
 
-    <div id="modal" class="hide" onclick="close_modal();">
+    <div id="modal" class="hide" onclick="close_modal(this);">
     </div>
+    {% else %}
+        <div> No images returns </div>
     {% endif %}
 
+
+{% block javascript %}
+<script>
+    const CSRF_TOKEN = '{{ csrf_token }}';
+    const MEDIA_URL = '{{ request.scheme }}://{{ request.META.HTTP_HOST }}'
+<!--    const MEDIA_URL = '{{ media_url }}';-->
+</script>
+<script src="{% static '/script.js' %}"></script>
+{% endblock javascript %}
 </body>
 </html>
