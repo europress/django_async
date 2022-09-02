@@ -4,6 +4,7 @@ from http import HTTPStatus
 import http
 from http.client import OK, HTTPResponse
 import json
+from posixpath import split
 import random
 import re
 import shutil
@@ -30,13 +31,13 @@ import requests
 from bs4 import BeautifulSoup
 import http.client as http_client
 
-from config.settings import PIXELS_API, MEDIA_URL
+from config.settings import PIXELS_API, MEDIA_URL, MEDIA_ROOT
 from .forms import SearchForm, MyForm
 from .services import search_image, save_images
 from .models import Image, Pixels
 
 """ my proxi """
-PROXY = 'http://rs4dmz:patv3!Sj@185.237.219.170:64444'
+DEFAULT_PROXY = 'http://rs4dmz:patv3!Sj@185.237.219.170:64444'
 
 
 # return self func name
@@ -95,17 +96,17 @@ def get_proxies(https_need: bool=False):
     proxy - string with user:passwd@url:port
     **kwargs - other params for request
 """
-def proxy_request(url, proxy=PROXY, **kwargs):
+def proxy_request(url, proxy=DEFAULT_PROXY, **kwargs):
     # http_client.HTTPConnection.debuglevel = 0
     response = False
+    # print(f"==> <proxy_request> kwargs: {kwargs}")
     try:
-        # print(f"==> check proxy <{myself}>: {proxy}")
-        proxies = {"http": proxy, "https": proxy}
-        response = requests.get(url, proxies=proxies, timeout=5, allow_redirects=False, **kwargs)
-        print(f"==> SUCCESS: Proxy currently being used: {proxy}")
+        proxies = get_env_proxies(proxy)
+        # print(f"==> <proxy_request> proxies: {proxies}")
+        response = requests.get(url, proxies=proxies, timeout=10, **kwargs)
+        # print(f"==> SUCCESS: Proxy currently being used: {proxy}")
     except requests.exceptions.RequestException as e:
-        # print(f"==> check proxy except <{myself}>: {e}")
-        pass
+        print(f"==> check proxy except <{myself}>: {e}")
 
     # http_client.HTTPConnection.debuglevel = 0
     return response
@@ -122,7 +123,8 @@ def make_thumbnail(image: PIL_Image, w: int = 280, h: int = 200) -> PIL_Image:
 def save_new_image_to_cache(id_key: int, alt: str, origin_url: str):
 
     headers = {'Authorization': PIXELS_API}
-    response = proxy_request(origin_url, proxy=PROXY, stream=True, headers=headers)
+
+    response = proxy_request(origin_url, stream=True, headers=headers)
 
     if response and response.ok:
         try:
@@ -190,6 +192,60 @@ def check_image_in_cache(photos_list) -> list:
 }
 """
 
+def get_env_proxies(proxy=DEFAULT_PROXY):
+    return {"http": proxy, "https": proxy}
+
+    
+def download_temporary_image(url:str) -> str:
+    # import the required libraries from Python
+    import pathlib,os,uuid
+    
+    # URL of the image you want to download
+    image_url = url
+
+    # Using the uuid generate new and unique names for your images
+    filename = str(uuid.uuid4())
+
+    # Strip the image extension from it's original name
+    file_ext = pathlib.Path(image_url).suffix
+    file_ext = file_ext.split("?")[0]
+    
+    # Join the new image name to the extension
+    picture_filename = filename + file_ext
+
+    # Using pathlib, specify where the image is to be saved
+    downloads_path = str(MEDIA_ROOT)
+
+    # Form a full image path by joining the path to the 
+    # images' new name
+    picture_path  = os.path.join(downloads_path, picture_filename)
+    print("==> <download_temporary_image> picture_path:", picture_path)
+
+    # Using "urlretrieve()" from urllib.request save the image
+    #create the object, assign it to a variable
+    proxy = urllib.request.ProxyHandler(get_env_proxies())
+    # construct a new opener using your proxy settings
+    opener = urllib.request.build_opener(proxy)
+
+    opener.addheaders =  [
+        ('Authorization', PIXELS_API), 
+        ('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Cafari/537.36')
+    ]
+    # install the openen on the module-level
+    urllib.request.install_opener(opener)
+    # make a request
+    try:
+        urllib.request.urlretrieve(image_url, picture_path)
+    except Exception as e:
+        print("==> <download_image> Error:", e)
+
+    # urlretrieve() takes in 2 arguments
+    # 1. The URL of the image to be downloaded
+    # 2. The image new name after download. By default, the image is 
+    #    saved inside your current working directory
+
+    return os.path.join(MEDIA_URL, picture_filename)
+
 """ Check host access (russian restrict) """
 def check_forbidden_host(host: str):
     return True
@@ -198,18 +254,25 @@ def check_forbidden_host(host: str):
 def create_image_thumbnail(urls: list):
 
     if check_forbidden_host("https://pexels.com"):
+        
+        for i in range(len(urls)):
+            url = urls[i].get("tiny","")
+            if url:
+                urls[i]["tiny"] = download_temporary_image(url=url)
 
-        for i in len(urls)-1:
-            img_url = urls[i]
-            response = proxy_request(img_url.tiny, proxy=PROXY, stream=True)
-            response.raw.decode_content = True # handle spurious Content-Encoding
+        #     img_url = urls[i]
+        #     response = proxy_request(img_url.get("tiny",""), proxy=PROXY, stream=True)
+        #     response.raw.decode_content = True # handle spurious Content-Encoding
 
-            temp_image = Image.open(response.raw)
-            temp_buffer = StringIO.StringIO()
-            temp_image.save(temp_buffer, "PNG")
-            thumbnail = temp_buffer.getvalue().encode("base64")
-            temp_buffer.close()
-            urls[i].tiny = thumbnail.split('\n')[0]
+        #     temp_image = PIL.Image.open(response.raw)
+        #     temp_buffer = BytesIO()
+        #     temp_image.save(temp_buffer, format="jpeg")
+        #     thumbnail = temp_buffer.getvalue().encode("base64")
+        #     temp_buffer.close()
+        #     urls[i].tiny = thumbnail.split('\n')[0]
+
+    return urls
+
 
 
 """ get list image description from stock for query 
@@ -217,6 +280,7 @@ def create_image_thumbnail(urls: list):
     count - count images request
 """
 def get_list_images_descriptions_from_stock(query: str, count: int):
+    
     headers = {
         'Authorization': PIXELS_API, 
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Cafari/537.36'
@@ -225,13 +289,18 @@ def get_list_images_descriptions_from_stock(query: str, count: int):
 
     url = 'https://api.pexels.com/v1/search'
 
-    response = proxy_request(url, proxy=PROXY, params=params, headers=headers)
-    
+    proxy = get_env_proxies()
+
+    response = proxy_request(url, params=params, headers=headers)
+   
     if response and response.ok:
         photos = response.json().get("photos", [])
-        return create_image_thumbnail(check_image_in_cache(photos))
+        photos_list = check_image_in_cache(photos)
+        photos_list = create_image_thumbnail(photos_list)
+        print("--> INFO: <get_list_images_descriptions_from_stock>: complite photos list: ", photos_list)
+        return photos_list
 
-    print("--> INFO: <get_list_images_descriptions_from_stock>: API pixels error response: ", response.status_code, response.reason)
+    # print("--> INFO: <get_list_images_descriptions_from_stock>: API pixels error response: ", response.status_code, response.reason)
     return []
 
 
@@ -273,33 +342,6 @@ def cache_update(request):
         alt = request_json_params.get("alt")
         tiny_url = request_json_params.get("tiny")
         origin_url = request_json_params.get("origin")
-        ''' very costly way sending raw data from js'''
-        # image_data = request_json_params.get("image_raw")
-        # image_data = re.sub("^data:image/png;base64,", "", image_data)
-        # image_data = base64.b64decode(image_data)
-        # image_data = BytesIO(image_data)
-        #
-        # with open('temp.io', "wb") as f:
-        #     f.write(image_data.getbuffer())
-        #
-        # ready_image = PIL_Image.open('temp.io')
-        # if not ready_image.verify():
-        #     print('::::ERR Image not valid, redirect ..')
-        #     return redirect('/')
-
-        # image_64_encode = base64.encodebytes(bytes(image_string, 'utf-8'))
-        # image_64_decode = base64.decodebytes(image_64_encode)
-        # ready_image = PIL_Image.frombytes('RGB', (500, 500), image_64_decode)
-
-        # ready_image = PIL_Image.frombytes('RGB', (500, 500), image_64_decode)
-        # url = request_json_params.get("origin")
-        # print('::::: parse POST data:', id_photo, alt, url)
-        # url = 'https://www.krasplastic.ru/img/europress_card.png'
-        # url = f"http://{''.join(url.split('//')[1])}"
-        # print(url)
-        # tmp_file, _ = urlretrieve(url)
-        # image_field = SimpleUploadedFile(f"{id_photo}.jpg", open(tmp_file, "rb").read())
-        """ end load image through buffer from js"""
 
         obj = save_new_image_to_cache(id_key=id_photo, alt=alt, origin_url=origin_url)
         if obj:
