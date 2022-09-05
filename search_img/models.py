@@ -14,4 +14,5 @@ class Pixels(models.Model):
     id = models.IntegerField(blank=None, primary_key=True)
     alt = models.CharField(max_length=100, blank=True)
     origin = models.ImageField()
+    query = models.CharField(max_length=30, blank=True)
 

@@ -185,6 +185,8 @@ async function modal(htmlCaller) {
 //            clog("fetch data: " + data);
             setBackgroundToElement(modalWindow, imageDataJson.origin );
             loadingAnimateShow(htmlCaller, 'stop');
+            htmlCaller.getElementsByTagName("i")[0].classList.remove("un_cached");
+            htmlCaller.getElementsByTagName("i")[0].classList.add("cached");
         })
     } else {
         setBackgroundToElement(modalWindow, imageDataJson.origin );

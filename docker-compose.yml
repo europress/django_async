@@ -1,0 +1,42 @@
+version: '3.10'
+
+networks:
+  ecosystem_network:
+    driver: bridge
+
+services:
+  web:
+    build:
+      context: .
+      network: host
+    environment:
+      MYENV: EXAMPLE
+    volumes:
+      - .:/app
+  web_migrate:
+    extends: web
+    command: python manage.py migrate
+  web_run:
+    extends: web
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+
+
+#  sqlite3:
+#    image: nouchka/sqlite3:latest
+#    stdin_open: true
+#    tty: true
+#    volumes:
+#      - ./:/home/asem/develop/Python/django_async/db.sqlite3
+#  img_web:
+#    build: .
+#    command:
+#      - python /app/manage.py runserver 0.0.0.0:8000
+#    volumes:
+#      - .:/app
+#      - sql_lite:/home/asem/db/sqlite
+#    ports:
+#      - "8000:8000"
+##    depends_on:
+##      - img_db

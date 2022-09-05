@@ -24,6 +24,11 @@
                 {{ url|json_script:url.id }}
                 <span></span>
                 <img width="300px" src="{{ url.tiny }}" alt="{{ url.alt }}">
+                {% if url.in_cache %}
+                    <i class="cache_icon cached"></i>
+                {% else %}
+                    <i class="cache_icon un_cached"></i>
+                {% endif %}
             </a>
         {% endfor %}
     </div>

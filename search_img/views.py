@@ -63,6 +63,7 @@ def check_image_in_cache(photos_list) -> list:
                     "alt": cached_image.alt,
                     "tiny": photo.get("src").get("tiny"),
                     "origin": cached_image.origin.url,
+                    "in_cache": True,
                 }
             )
         except ObjectDoesNotExist:
@@ -71,7 +72,8 @@ def check_image_in_cache(photos_list) -> list:
                     "id": photo_id,
                     "alt": photo.get("alt", ""),
                     "tiny": photo.get("src").get("tiny"),
-                    "origin": photo.get("src").get("original")
+                    "origin": photo.get("src").get("original"),
+                    "in_cache": False,
                 }
             )
     # print("--> INFO <check_image_in_cache>: list photos", result_list)
